@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec                                      
 import cv2                                                                 
 import os
+from audio_utils import audio_file_to_spectrogram_png
 IMAGE_PATH = 'test.jpg'
 AUDIO_PATH = 'testaudio.wav'
 print("Loading models...")
@@ -31,27 +32,9 @@ shared_species = sorted(set(img_class_indices.keys()) & set(aud_class_indices.ke
 print(f"Shared species: {len(shared_species)}")
 
 def audio_to_spectrogram_png(audio_path, save_path='temp_spec.png'):
-    """Convert wav to mel-spectrogram PNG exactly like training."""
-    y, sr = librosa.load(audio_path, sr=22050)
-
-    window_len = 5 * sr
-    if len(y) < window_len:
-        y = np.pad(y, (0, window_len - len(y)))
-    else:
-        y = y[:window_len]
-
-    mel    = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128,
-                                             fmax=8000)
-    mel_db = librosa.power_to_db(mel, ref=np.max)
-    fig = plt.figure(figsize=(2.24, 2.24), dpi=100)
-    ax  = fig.add_axes([0, 0, 1, 1])
-    ax.axis('off')
-    librosa.display.specshow(mel_db, sr=sr, fmax=8000,
-                             ax=ax, cmap='viridis')
-    plt.savefig(save_path, dpi=100, bbox_inches=None,
-                pad_inches=0, facecolor='black')
-    plt.close()
-    return save_path
+    """Convert wav to mel-spectrogram PNG using the same code as training
+    (see audio_utils.py, also used by audio_to_spectrogram.py)."""
+    return audio_file_to_spectrogram_png(audio_path, save_path)
 def load_spectrogram_for_model(png_path):
     """Load PNG spectrogram and apply preprocess_input — same as training."""
     img = image.load_img(png_path, target_size=(224, 224))

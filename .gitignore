@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+.DS_Store
+
+# Datasets (too large for git)
+train/
+valid/
+audio_train/
+audio_valid/
+audio_train_spectrogram/
+audio_valid_spectrogram/
+
+# Generated artifacts (weights, class maps, temp files, plots)
+*.h5
+*.keras
+class_indices.json
+audio_class_indices.json
+temp_spec.png
+audio_training_history.png
+gradcam_fusion_result.png
+
+# Local test inputs for fusion.py
+test.jpg
+testaudio.wav
+
+# Keep the README example image
+!assets/gradcam_fusion_result.png
