@@ -2,9 +2,9 @@
 
 A multimodal classifier for 25 bird species. It combines two ResNet50 transfer-learning models, one trained on **photos** and one on **mel-spectrograms of bird calls**. A confidence-based adaptive fusion step merges their predictions, and **Grad-CAM** heatmaps show what each model looked at.
 
-![Example fusion output](assets/gradcam_fusion_result.png)
+![Pipeline overview](assets/pipeline_overview.png)
 
-*Output of `src/fusion.py`: image branch (top), audio branch (bottom), and the fused prediction in the title.*
+*Concept illustration of the pipeline. The numbers and heatmaps in this figure are illustrative, not real model output. See [Example result](#example-result) for actual output.*
 
 ## Architecture
 
@@ -62,6 +62,12 @@ fused = w_img * p_img + w_aud * p_aud
 ```
 
 **Grad-CAM** is computed on the last ResNet50 conv block (`conv5_block3_out`) for both branches.
+
+## Example result
+
+![Example fusion output](assets/gradcam_fusion_result.png)
+
+*Real output of `src/fusion.py` on a Common Myna photo. The image model is ~100% confident in Common Myna, while the audio model (given a non-matching recording) predicts Cattle Egret. Because fusion weights each model by its confidence, the correct species still wins. This shows how fusion lets one modality cover for the other when it fails.*
 
 ## Repository layout
 
