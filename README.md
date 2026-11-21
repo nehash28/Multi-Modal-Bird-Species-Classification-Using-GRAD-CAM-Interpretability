@@ -6,16 +6,46 @@ A multimodal classifier for 25 bird species. It combines two ResNet50 transfer-l
 
 *Output of `src/fusion.py`: image branch (top), audio branch (bottom), and the fused prediction in the title.*
 
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph IMG["Image branch"]
+        direction TB
+        I0["Bird photo<br/>.jpg"] --> I1["Resize 224x224<br/>ResNet50 preprocess_input"]
+        I1 --> I2["Test-time augmentation<br/>original + horizontal flip"]
+        I2 --> I3["ResNet50 backbone<br/>ImageNet weights, frozen"]
+        I3 --> I4["GlobalAvgPool<br/>Dense 256 ReLU, Dropout 0.5"]
+        I4 --> I5["Softmax<br/>25 species"]
+        I5 --> PI(["p_img"])
+    end
+
+    subgraph AUD["Audio branch"]
+        direction TB
+        A0["Bird call<br/>.wav"] --> A1["Load 22.05 kHz<br/>trim silence, pad/cut to 5 s"]
+        A1 --> A2["Mel-spectrogram<br/>128 mels, n_fft 2048, hop 512, dB"]
+        A2 --> A3["Spectrogram PNG<br/>resize 224x224"]
+        A3 --> A4["ResNet50 backbone<br/>last 20 layers fine-tuned"]
+        A4 --> A5["GlobalAvgPool<br/>Dense 512, 256, 128<br/>BatchNorm + Dropout"]
+        A5 --> A6["Softmax<br/>species"]
+        A6 --> PA(["p_aud"])
+    end
+
+    PI --> AL["Align on shared species"]
+    PA --> AL
+    AL --> F["Confidence-based adaptive fusion<br/>w_img = c_img / (c_img + c_aud)<br/>w_aud = c_aud / (c_img + c_aud)<br/>fused = w_img*p_img + w_aud*p_aud"]
+    F --> OUT(["Predicted species<br/>+ fused confidence"])
+
+    I3 -. "conv5_block3_out" .-> GI["Grad-CAM<br/>image heatmap"]
+    A4 -. "conv5_block3_out" .-> GA["Grad-CAM<br/>spectrogram heatmap"]
+    GI --> VIS["Result figure<br/>gradcam_fusion_result.png"]
+    GA --> VIS
+    OUT --> VIS
+```
+
 ## How it works
 
-```
- photo (.jpg) ──► ResNet50 (image model) ──► p_img ─┐
-                                                    ├─► confidence-based adaptive fusion ──► species
- call (.wav) ──► mel-spectrogram ──► ResNet50 ─► p_aud ─┘
-                    (audio model)
-```
-
-**Image model** (`train_resnet50.py`): ImageNet-pretrained ResNet50 (frozen) → GlobalAveragePooling → Dense(256) → Dropout(0.5) → softmax. Trained with augmentation (rotation, shifts, zoom, flip), Adam (1e-3), early stopping.
+**Image model** (`train_resnet50.py`): ImageNet-pretrained ResNet50 (frozen) → GlobalAveragePooling → Dense(256) → Dropout(0.5) → softmax. Trained with augmentation (rotation, shifts, zoom, flip), Adam (1e-3), early stopping. At inference, `fusion.py` averages predictions over the original and a horizontally flipped image.
 
 **Audio model** (`train_audio.py`): audio is trimmed, padded/cut to 5 s, and converted to a 128-band mel-spectrogram PNG. The same ResNet50 backbone is used with a deeper head (Dense 512/256/128 with BatchNorm and Dropout). Training runs in two phases:
 1. frozen backbone (lr 1e-3)
